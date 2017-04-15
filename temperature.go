@@ -38,6 +38,8 @@ func (s *Sensibo) setupTargetTemperature() {
 		currentState.TargetTemperature = int(newValue)
 		go func() {
 			s.api.ReplaceState(s.pod.ID, currentState)
+			s.CurrentState = currentState
+			s.updateHomeKitFromState()
 		}()
 	})
 }

@@ -2,6 +2,7 @@ package sensibo
 
 import (
 	"github.com/brutella/hc/characteristic"
+	"github.com/brutella/hc/log"
 )
 
 const (
@@ -59,7 +60,10 @@ func (s *Sensibo) setupTargetHeatingCoolingState() {
 			currentState.On = false
 		}
 		go func() {
+			log.Debug.Println("Update target heating cooling state", currentState)
 			s.api.ReplaceState(s.pod.ID, currentState)
+			s.CurrentState = currentState
+			s.updateHomeKitFromState()
 		}()
 	})
 }
