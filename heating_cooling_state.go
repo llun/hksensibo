@@ -58,6 +58,8 @@ func (s *Sensibo) setupTargetHeatingCoolingState() {
 		default:
 			currentState.On = false
 		}
-		s.api.ReplaceState(s.pod.ID, currentState)
+		go func() {
+			s.api.ReplaceState(s.pod.ID, currentState)
+		}()
 	})
 }

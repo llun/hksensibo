@@ -36,7 +36,9 @@ func (s *Sensibo) setupTargetTemperature() {
 
 		currentState := s.CurrentState
 		currentState.TargetTemperature = int(newValue)
-		s.api.ReplaceState(s.pod.ID, currentState)
+		go func() {
+			s.api.ReplaceState(s.pod.ID, currentState)
+		}()
 	})
 }
 
@@ -63,11 +65,6 @@ func (s *Sensibo) updateTargetTemperature() {
 	value := s.CurrentMeasurement.Temperature
 	if s.TemperatureUnit == TemperatureUnitFahrenheit {
 		value = CelciusToFahrenheit(value)
-		state.SetMinValue(CelciusToFahrenheit(10))
-		state.SetMaxValue(CelciusToFahrenheit(35))
-	} else {
-		state.SetMinValue(10)
-		state.SetMaxValue(35)
 	}
 	state.SetValue(float64(value))
 }
