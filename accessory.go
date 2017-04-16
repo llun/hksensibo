@@ -91,7 +91,7 @@ func (s *Sensibo) setup() {
 	go func() {
 		c := time.Tick(30 * time.Second)
 		for range c {
-			states, err := s.api.GetAcState(s.pod.ID)
+			states, err := s.api.GetAcStates(s.pod.ID)
 			if err != nil {
 				continue
 			}
@@ -99,7 +99,7 @@ func (s *Sensibo) setup() {
 				s.CurrentState = states[0].AcState
 			}
 
-			measurements, err := api.GetMeasurements(pod.ID)
+			measurements, err := s.api.GetMeasurements(pod.ID)
 			if err != nil {
 				continue
 			}
