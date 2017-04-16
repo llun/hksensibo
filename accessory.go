@@ -99,7 +99,7 @@ func (s *Sensibo) setup() {
 				s.CurrentState = states[0].AcState
 			}
 
-			measurements, err := s.api.GetMeasurements(pod.ID)
+			measurements, err := s.api.GetMeasurements(s.pod.ID)
 			if err != nil {
 				continue
 			}
