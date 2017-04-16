@@ -91,6 +91,21 @@ func (s *Sensibo) setup() {
 	go func() {
 		c := time.Tick(30 * time.Second)
 		for range c {
+			states, err := s.api.GetAcState(s.pod.ID)
+			if err != nil {
+				continue
+			}
+			if len(states) != 0 {
+				s.CurrentState = states[0].AcState
+			}
+
+			measurements, err := api.GetMeasurements(pod.ID)
+			if err != nil {
+				continue
+			}
+			if len(measurements) != 0 {
+				s.CurrentMeasurement = measurements[0]
+			}
 			s.updateHomeKitFromState()
 		}
 	}()
