@@ -1,31 +1,95 @@
-package sensibo
+package hksensibo
 
 import (
 	"github.com/brutella/hc/accessory"
+	"github.com/brutella/hc/characteristic"
 	"github.com/brutella/hc/log"
 	"github.com/brutella/hc/service"
+	"github.com/llun/hksensibo/actions"
 	"github.com/llun/sensibo-golang"
 
 	"time"
 )
 
-type TemperatureUnit string
-
-const (
-	TemperatureUnitCelcius    TemperatureUnit = "C"
-	TemperatureUnitFahrenheit                 = "F"
-)
-
 type Sensibo struct {
 	*accessory.Accessory
 
-	Thermostat         *service.Thermostat
-	CurrentState       sensibo.AcState
-	CurrentMeasurement sensibo.Measurement
-	TemperatureUnit    TemperatureUnit
+	Thermostat  *service.Thermostat
+	state       sensibo.AcState
+	measurement sensibo.Measurement
 
-	api *sensibo.Sensibo
-	pod sensibo.Pod
+	worker    *actions.Worker
+	pollingCh <-chan time.Time
+}
+
+func (s *Sensibo) PollingState() {
+	s.worker.AddAction(actions.NewGetAcState())
+	s.worker.AddAction(actions.NewGetMeasurement())
+	for range s.pollingCh {
+		s.worker.AddAction(actions.NewGetAcState())
+		s.worker.AddAction(actions.NewGetMeasurement())
+	}
+}
+
+func (s *Sensibo) UpdateAcState(state sensibo.AcState) {
+	s.state = state
+
+	targetState := characteristic.TargetHeatingCoolingStateOff
+	currentState := characteristic.CurrentHeatingCoolingStateOff
+	if state.On {
+		switch state.Mode {
+		case DRY_MODE:
+			targetState = characteristic.TargetHeatingCoolingStateHeat
+			currentState = characteristic.CurrentHeatingCoolingStateHeat
+		case COOL_MODE:
+			targetState = characteristic.TargetHeatingCoolingStateCool
+			currentState = characteristic.TargetHeatingCoolingStateCool
+		default:
+			targetState = characteristic.TargetHeatingCoolingStateAuto
+			currentState = characteristic.TargetHeatingCoolingStateCool
+		}
+	}
+
+	s.Thermostat.CurrentHeatingCoolingState.UpdateValue(currentState)
+	s.Thermostat.TargetHeatingCoolingState.UpdateValue(targetState)
+	s.Thermostat.TargetTemperature.UpdateValue(float64(state.TargetTemperature))
+}
+
+func (s *Sensibo) UpdateMeasurement(measurement sensibo.Measurement) {
+	s.measurement = measurement
+	s.Thermostat.CurrentTemperature.UpdateValue(measurement.Temperature)
+}
+
+func (s *Sensibo) CurrentAcState() sensibo.AcState {
+	return s.state
+}
+
+func (s *Sensibo) CurrentMeasurement() sensibo.Measurement {
+	return s.measurement
+}
+
+func NewSensibo(pod sensibo.Pod, api *sensibo.Sensibo) *Sensibo {
+	info := accessory.Info{
+		Name:         "Sensibo",
+		Manufacturer: "Sensibo",
+		SerialNumber: pod.ID,
+		Model:        pod.Room.Name,
+	}
+
+	acc := Sensibo{
+		Thermostat: service.NewThermostat(),
+		pollingCh:  time.Tick(30 * time.Second),
+	}
+	acc.Accessory = accessory.New(info, accessory.TypeThermostat)
+	acc.AddService(acc.Thermostat.Service)
+	acc.Thermostat.TargetTemperature.OnValueRemoteUpdate(acc.onTargetTemperatureUpdate)
+	acc.Thermostat.TargetHeatingCoolingState.OnValueRemoteUpdate(acc.onHeatingCoolingStateUpdate)
+
+	worker := actions.NewWorker(api, pod, &acc)
+	acc.worker = worker
+	go worker.Run()
+	go acc.PollingState()
+	return &acc
 }
 
 func Lookup(key string) []*Sensibo {
@@ -42,79 +106,4 @@ func Lookup(key string) []*Sensibo {
 	}
 
 	return services
-}
-
-func NewSensibo(pod sensibo.Pod, api *sensibo.Sensibo) *Sensibo {
-	info := accessory.Info{
-		Name:         "Sensibo",
-		Manufacturer: "Sensibo",
-		SerialNumber: pod.ID,
-		Model:        pod.Room.Name,
-	}
-
-	acc := Sensibo{
-		TemperatureUnit: TemperatureUnitCelcius,
-		pod:             pod,
-		api:             api,
-	}
-	acc.Accessory = accessory.New(info, accessory.TypeThermostat)
-	acc.Thermostat = service.NewThermostat()
-	acc.AddService(acc.Thermostat.Service)
-
-	states, err := api.GetAcStates(pod.ID)
-	if err != nil {
-		log.Info.Fatal(err)
-	}
-	if len(states) != 0 {
-		acc.CurrentState = states[0].AcState
-	}
-
-	measurements, err := api.GetMeasurements(pod.ID)
-	if err != nil {
-		log.Info.Fatal(err)
-	}
-	if len(measurements) != 0 {
-		acc.CurrentMeasurement = measurements[0]
-	}
-
-	acc.setup()
-	return &acc
-}
-
-func (s *Sensibo) setup() {
-	s.setupTemperatureDisplayUnits()
-	s.setupTargetHeatingCoolingState()
-	s.setupTargetTemperature()
-	s.updateCurrentTemperature()
-	s.updateCurrentHeatingCoolingState()
-
-	go func() {
-		c := time.Tick(30 * time.Second)
-		for range c {
-			states, err := s.api.GetAcStates(s.pod.ID)
-			if err != nil {
-				continue
-			}
-			if len(states) != 0 {
-				s.CurrentState = states[0].AcState
-			}
-
-			measurements, err := s.api.GetMeasurements(s.pod.ID)
-			if err != nil {
-				continue
-			}
-			if len(measurements) != 0 {
-				s.CurrentMeasurement = measurements[0]
-			}
-			s.updateHomeKitFromState()
-		}
-	}()
-}
-
-func (s *Sensibo) updateHomeKitFromState() {
-	s.updateTemperatureDisplayUnits()
-	s.updateCurrentTemperature()
-	s.updateTargetTemperature()
-	s.updateCurrentHeatingCoolingState()
-	s.updateTargetHeatingCoolingState()
 }
