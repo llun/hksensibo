@@ -1,6 +1,7 @@
 package actions
 
 import (
+	"github.com/brutella/hc/log"
 	"github.com/llun/sensibo-golang"
 
 	"container/list"
@@ -50,7 +51,9 @@ func (w *Worker) Run() {
 		if !ok {
 			continue
 		}
-		action.Run(w.api, w.pod, w.store)
+
+		log.Debug.Printf("Sensibo run %v", action.Name())
+		go action.Run(w.api, w.pod, w.store)
 	}
 }
 

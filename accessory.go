@@ -78,7 +78,7 @@ func NewSensibo(pod sensibo.Pod, api *sensibo.Sensibo) *Sensibo {
 
 	acc := Sensibo{
 		Thermostat: service.NewThermostat(),
-		pollingCh:  time.Tick(30 * time.Second),
+		pollingCh:  time.Tick(300 * time.Second),
 	}
 	acc.Accessory = accessory.New(info, accessory.TypeThermostat)
 	acc.AddService(acc.Thermostat.Service)
