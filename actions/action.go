@@ -53,7 +53,7 @@ func (w *Worker) Run() {
 		}
 
 		log.Debug.Printf("Sensibo run %v", action.Name())
-		go action.Run(w.api, w.pod, w.store)
+		action.Run(w.api, w.pod, w.store)
 	}
 }
 

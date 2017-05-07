@@ -25,7 +25,11 @@ func (a *UpdateAcMode) Run(api *sensibo.Sensibo, pod sensibo.Pod, store Store) {
 	store.UpdateAcState(state)
 
 	log.Debug.Printf("Update %v to %v", pod.ID, state)
-	api.ReplaceState(pod.ID, state)
+	response, err := api.ReplaceState(pod.ID, state)
+	if err != nil {
+		log.Debug.Println("Sensibo error", err)
+	}
+	log.Debug.Println("Sensibo response", response)
 }
 
 func (a *UpdateAcMode) Name() string {
