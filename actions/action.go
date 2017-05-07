@@ -8,6 +8,8 @@ import (
 	"time"
 )
 
+const RETRY_COUNT = 3
+
 type Store interface {
 	CurrentAcState() sensibo.AcState
 	CurrentMeasurement() sensibo.Measurement
