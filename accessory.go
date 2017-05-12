@@ -14,9 +14,10 @@ import (
 type Sensibo struct {
 	*accessory.Accessory
 
-	Thermostat  *service.Thermostat
-	state       sensibo.AcState
-	measurement sensibo.Measurement
+	Thermostat     *service.Thermostat
+	HumiditySensor *service.HumiditySensor
+	state          sensibo.AcState
+	measurement    sensibo.Measurement
 
 	worker    *actions.Worker
 	pollingCh <-chan time.Time
@@ -58,6 +59,7 @@ func (s *Sensibo) UpdateAcState(state sensibo.AcState) {
 func (s *Sensibo) UpdateMeasurement(measurement sensibo.Measurement) {
 	s.measurement = measurement
 	s.Thermostat.CurrentTemperature.UpdateValue(measurement.Temperature)
+	s.HumiditySensor.CurrentRelativeHumidity.UpdateValue(measurement.Humidity)
 }
 
 func (s *Sensibo) CurrentAcState() sensibo.AcState {
@@ -77,11 +79,13 @@ func NewSensibo(pod sensibo.Pod, api *sensibo.Sensibo) *Sensibo {
 	}
 
 	acc := Sensibo{
-		Thermostat: service.NewThermostat(),
-		pollingCh:  time.Tick(60 * time.Second),
+		Thermostat:     service.NewThermostat(),
+		HumiditySensor: service.NewHumiditySensor(),
+		pollingCh:      time.Tick(60 * time.Second),
 	}
 	acc.Accessory = accessory.New(info, accessory.TypeThermostat)
 	acc.AddService(acc.Thermostat.Service)
+	acc.AddService(acc.HumiditySensor.Service)
 	acc.Thermostat.TargetTemperature.OnValueRemoteUpdate(acc.onTargetTemperatureUpdate)
 	acc.Thermostat.TargetHeatingCoolingState.OnValueRemoteUpdate(acc.onHeatingCoolingStateUpdate)
 

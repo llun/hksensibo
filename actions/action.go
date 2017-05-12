@@ -48,9 +48,11 @@ func (w *Worker) Run() {
 			continue
 		}
 
+		log.Debug.Printf("Sensibo workers queue %v", w.actions.Len())
 		head := w.actions.Front()
 		action, ok := w.actions.Remove(head).(Action)
 		if !ok {
+			log.Debug.Println("Sensibo skip action")
 			continue
 		}
 
