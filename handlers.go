@@ -11,22 +11,22 @@ const (
 )
 
 func (s *Sensibo) onTargetTemperatureUpdate(temperature float64) {
-	action := actions.NewUpdateTargetTemperature(int(temperature))
+	action := actions.NewUpdateTargetTemperature(s.api, s.pod, s, int(temperature))
 	s.worker.AddAction(action)
 }
 
 func (s *Sensibo) onHeatingCoolingStateUpdate(status int) {
 	switch status {
 	case 1:
-		s.worker.AddAction(actions.NewUpdatePowerState(true))
-		s.worker.AddAction(actions.NewUpdateAcMode(DRY_MODE))
+		s.worker.AddAction(actions.NewUpdatePowerState(s.api, s.pod, s, true))
+		s.worker.AddAction(actions.NewUpdateAcMode(s.api, s.pod, s, DRY_MODE))
 	case 2:
-		s.worker.AddAction(actions.NewUpdatePowerState(true))
-		s.worker.AddAction(actions.NewUpdateAcMode(COOL_MODE))
+		s.worker.AddAction(actions.NewUpdatePowerState(s.api, s.pod, s, true))
+		s.worker.AddAction(actions.NewUpdateAcMode(s.api, s.pod, s, COOL_MODE))
 	case 3:
-		s.worker.AddAction(actions.NewUpdatePowerState(true))
-		s.worker.AddAction(actions.NewUpdateAcMode(AUTO_MODE))
+		s.worker.AddAction(actions.NewUpdatePowerState(s.api, s.pod, s, true))
+		s.worker.AddAction(actions.NewUpdateAcMode(s.api, s.pod, s, AUTO_MODE))
 	default:
-		s.worker.AddAction(actions.NewUpdatePowerState(false))
+		s.worker.AddAction(actions.NewUpdatePowerState(s.api, s.pod, s, false))
 	}
 }

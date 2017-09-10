@@ -5,21 +5,25 @@ import (
 	"github.com/llun/sensibo-golang"
 )
 
-type GetMeasurement struct{}
-
-func NewGetMeasurement() *GetMeasurement {
-	return &GetMeasurement{}
+type GetMeasurement struct {
+	api   *sensibo.Sensibo
+	pod   sensibo.Pod
+	store Store
 }
 
-func (a *GetMeasurement) Run(api *sensibo.Sensibo, pod sensibo.Pod, store Store) {
-	measurements, err := api.GetMeasurements(pod.ID)
+func NewGetMeasurement(api *sensibo.Sensibo, pod sensibo.Pod, store Store) *GetMeasurement {
+	return &GetMeasurement{api, pod, store}
+}
+
+func (a *GetMeasurement) Run() {
+	measurements, err := a.api.GetMeasurements(a.pod.ID)
 	if err != nil {
-		log.Debug.Printf("Cannot get measurement for pod %v with error %v", pod.ID, err)
+		log.Debug.Printf("Cannot get measurement for pod %v with error %v", a.pod.ID, err)
 		return
 	}
 
 	if len(measurements) != 0 {
-		store.UpdateMeasurement(measurements[0])
+		a.store.UpdateMeasurement(measurements[0])
 		log.Debug.Println("Update measurement to ", measurements[0])
 	}
 }

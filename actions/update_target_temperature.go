@@ -8,21 +8,25 @@ import (
 )
 
 type UpdateTargetTemperature struct {
+	api   *sensibo.Sensibo
+	pod   sensibo.Pod
+	store Store
+
 	temperature int
 }
 
-func NewUpdateTargetTemperature(temperature int) *UpdateTargetTemperature {
-	return &UpdateTargetTemperature{temperature}
+func NewUpdateTargetTemperature(api *sensibo.Sensibo, pod sensibo.Pod, store Store, temperature int) *UpdateTargetTemperature {
+	return &UpdateTargetTemperature{api, pod, store, temperature}
 }
 
-func (a *UpdateTargetTemperature) Run(api *sensibo.Sensibo, pod sensibo.Pod, store Store) {
-	state := store.CurrentAcState()
+func (a *UpdateTargetTemperature) Run() {
+	state := a.store.CurrentAcState()
 	state.TargetTemperature = a.temperature
-	store.UpdateAcState(state)
+	a.store.UpdateAcState(state)
 
-	log.Debug.Printf("Sensibo Update %v to %v", pod.ID, state)
+	log.Debug.Printf("Sensibo Update %v to %v", a.pod.ID, state)
 	for i := 0; i < RETRY_COUNT; i++ {
-		response, err := api.ReplaceState(pod.ID, state)
+		response, err := a.api.ReplaceState(a.pod.ID, state)
 		log.Debug.Println("Sensibo response", response)
 		if err != nil {
 			log.Debug.Println("Sensibo error", err)

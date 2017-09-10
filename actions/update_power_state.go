@@ -8,21 +8,25 @@ import (
 )
 
 type UpdatePowerState struct {
+	api   *sensibo.Sensibo
+	pod   sensibo.Pod
+	store Store
+
 	power bool
 }
 
-func NewUpdatePowerState(power bool) *UpdatePowerState {
-	return &UpdatePowerState{power}
+func NewUpdatePowerState(api *sensibo.Sensibo, pod sensibo.Pod, store Store, power bool) *UpdatePowerState {
+	return &UpdatePowerState{api, pod, store, power}
 }
 
-func (a *UpdatePowerState) Run(api *sensibo.Sensibo, pod sensibo.Pod, store Store) {
-	state := store.CurrentAcState()
+func (a *UpdatePowerState) Run() {
+	state := a.store.CurrentAcState()
 	state.On = a.power
-	store.UpdateAcState(state)
+	a.store.UpdateAcState(state)
 
-	log.Debug.Printf("Sensibo Update %v to %v", pod.ID, state)
+	log.Debug.Printf("Sensibo Update %v to %v", a.pod.ID, state)
 	for i := 0; i < RETRY_COUNT; i++ {
-		response, err := api.ReplaceState(pod.ID, state)
+		response, err := a.api.ReplaceState(a.pod.ID, state)
 		log.Debug.Println("Sensibo response", response)
 		if err != nil {
 			log.Debug.Println("Sensibo error", err)

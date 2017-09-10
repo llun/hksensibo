@@ -14,21 +14,25 @@ const (
 )
 
 type UpdateAcMode struct {
+	api   *sensibo.Sensibo
+	pod   sensibo.Pod
+	store Store
+
 	mode string
 }
 
-func NewUpdateAcMode(mode string) *UpdateAcMode {
-	return &UpdateAcMode{mode}
+func NewUpdateAcMode(api *sensibo.Sensibo, pod sensibo.Pod, store Store, mode string) *UpdateAcMode {
+	return &UpdateAcMode{api, pod, store, mode}
 }
 
-func (a *UpdateAcMode) Run(api *sensibo.Sensibo, pod sensibo.Pod, store Store) {
-	state := store.CurrentAcState()
+func (a *UpdateAcMode) Run() {
+	state := a.store.CurrentAcState()
 	state.Mode = a.mode
-	store.UpdateAcState(state)
+	a.store.UpdateAcState(state)
 
-	log.Debug.Printf("Sensibo Update %v to %v", pod.ID, state)
+	log.Debug.Printf("Sensibo Update %v to %v", a.pod.ID, state)
 	for i := 0; i < RETRY_COUNT; i++ {
-		response, err := api.ReplaceState(pod.ID, state)
+		response, err := a.api.ReplaceState(a.pod.ID, state)
 		log.Debug.Println("Sensibo response", response)
 		if err != nil {
 			log.Debug.Println("Sensibo error", err)
